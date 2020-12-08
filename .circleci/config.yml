@@ -11,6 +11,9 @@ jobs:
       - node/install-npm
       # Install dependencies - the node Orb take care of installation and dependency caching
       - run:
+          name: Install System dependencies
+          command: apt-get install libgtk2.0-0 libgtk-3-0 libgbm-dev libnotify-dev libgconf-2-4 libnss3 libxss1 libasound2 libxtst6 xauth xvfb
+      - run:
           name: TestExecution
           command: npm run cy:run
 workflows:
