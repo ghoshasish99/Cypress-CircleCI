@@ -1,19 +1,46 @@
 version: 2.1
 orbs:
-  node: circleci/node@3.0.0
-
-jobs:
-  build:
-    executor: node/default
-    steps:
-      - checkout
-      # Install the latest npm - the node Orb takes care of it
-      - node/install-npm
-      # Install dependencies - the node Orb take care of installation and dependency caching
-      - run:
-          name: TestExecution
-          command: docker run -it -v $PWD:/e2e -w /e2e cypress/included:3.2.0
+  # use Cypress orb from CircleCI registry
+  cypress: cypress-io/cypress@1.26.0
 workflows:
-  test-execution:
+  linux-build:
     jobs:
-      - build
+      # checks out code and installs dependencies once
+      - cypress/install:
+          name: 'Linux install'
+          post-steps:
+            # show Cypress cache folder and binary versions
+            # to check if we are caching previous binary versions
+            - run: npx cypress cache path
+            - run: npx cypress cache list
+            - run: npx cypress info
+            # let's print version info
+            - run: npx cypress version
+            - run: npx cypress version --component package
+            - run: npx cypress version --component binary
+            - run: npx cypress version --component electron
+            - run: npx cypress version --component node
+
+      - cypress/run:
+          name: 'Linux lint'
+          requires:
+            - Linux install
+          # the previous job has already installed every dependency
+          # and saved the workspace. "cypress/run" automatically restores the workspace
+          install-command: echo 'Already installed'
+          # run all lint checks
+          command: 'npm run build'
+          # this job does not need to save its files
+          no-workspace: true
+
+      # and records on Cypress Dashboard
+      - cypress/run:
+          # name this job because we are running "cypress/run" several times
+          # with different parameters
+          name: '3 machines'
+          # job will use workspace with code and dependencies
+          # installed by the "install" job
+          requires:
+            - Linux install
+          start: 'npm run start:ci'  # start server before running tests
+          run: npm run cy:run
